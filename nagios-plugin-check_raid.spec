@@ -1,6 +1,15 @@
+%if %(test -f /etc/redhat-release && echo 1 || echo 0 )
+%define target redhat
+%else
+%define target unknown
+%endif
 %define		plugin	check_raid
 Summary:	Nagios plugin to check current server's RAID status
+%if %{target} == "redhat"
+Name:		nagios-plugins-%{plugin}
+%else
 Name:		nagios-plugin-%{plugin}
+%endif
 Version:	%{version}
 Release:	%{release}
 License:	GPL v2
@@ -8,9 +17,9 @@ Group:		Networking
 Source0:	%{plugin}.pl
 Source1:	%{plugin}.cfg
 URL:		https://github.com/glensc/nagios-plugin-check_raid
-Requires:	%{plugindir}
 Requires:	/usr/bin/perl
 Requires:	sudo
+%if %{target} != "redhat"
 Suggests:	CmdTool2
 Suggests:	arcconf
 Suggests:	areca-cli
@@ -22,14 +31,21 @@ Suggests:	megarc-scsi
 Suggests:	mpt-status
 Suggests:	smartmontools
 Suggests:	tw_cli-9xxx
+%endif
 BuildArch:	noarch
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		_sysconfdir	/etc/nagios/plugins
 %define		plugindir	%{_prefix}/lib/nagios/plugins
 
+%if %{target} == "redhat"
+%define		docdir          %{_prefix}/share/doc/%{name}-%{version}
+%else
+%define		docdir          %{_prefix}/share/doc/%{name}-%{version}
+%endif
+
 %description
-This plugin chekcs Check all RAID volumes (hardware and software) that
+This plugin checks Check all RAID volumes (hardware and software) that
 can be identified.
 
 Supports:
@@ -58,13 +74,19 @@ Supports:
 %prep
 %setup -qcT
 cp -p %{SOURCE0} .
+cp -p %{_sourcedir}/README.md .
+cp -p %{_sourcedir}/ChangeLog.md .
+cp -p %{_sourcedir}/CONTRIBUTING.md .
 cp -p %{SOURCE1} .
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT{%{_sysconfdir},%{plugindir}}
+install -d $RPM_BUILD_ROOT{%{_sysconfdir},%{plugindir},%{docdir}}
 install -p %{plugin}.pl $RPM_BUILD_ROOT%{plugindir}/%{plugin}
-cp -p %{plugin}.cfg $RPM_BUILD_ROOT%{_sysconfdir}/%{plugin}.cfg
+install -p %{plugin}.cfg $RPM_BUILD_ROOT%{_sysconfdir}/%{plugin}.cfg
+install -p README.md $RPM_BUILD_ROOT%{docdir}/README.md
+install -p ChangeLog.md $RPM_BUILD_ROOT%{docdir}/ChangeLog.md
+install -p CONTRIBUTING.md $RPM_BUILD_ROOT%{docdir}/CONTRIBUTING.md
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -85,3 +107,4 @@ fi
 %defattr(644,root,root,755)
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{plugin}.cfg
 %attr(755,root,root) %{plugindir}/%{plugin}
+%attr(644,root,root) %{docdir}/*
